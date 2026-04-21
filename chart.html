@@ -14,7 +14,7 @@
         #chart { width: 100%; height: 850px; }
         .status { color: #666; font-size: 0.9em; margin-top: 10px; }
         
-        /* สไตล์สำหรับปุ่มเลือกช่วงเวลา */
+        /* ปุ่มเลือกช่วงเวลา */
         .btn-group { display: flex; gap: 10px; justify-content: center; margin-bottom: 15px; flex-wrap: wrap; }
         .btn-group button {
             padding: 8px 16px; border: 1px solid #00B0F0; background: white; color: #00B0F0;
@@ -23,44 +23,41 @@
         .btn-group button:hover { background: #00B0F0; color: white; }
         .btn-group button.active { background: #00B0F0; color: white; border-color: #00B0F0; }
 
-        /* สไตล์สำหรับแผงควบคุมแกน Y ที่แยกแต่ละหน้าต่าง */
+        /* แผงควบคุมแกน Y */
         .y-control-panel {
-            position: absolute;
-            right: 60px; /* ให้ตรงกับ margin ขวาของกราฟ */
-            display: none; /* ซ่อนไว้จนกว่ากราฟจะโหลดเสร็จ */
-            gap: 5px;
-            align-items: center;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 4px 12px;
-            border-radius: 6px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-            font-size: 0.85em;
-            z-index: 10;
-            border: 1px solid #e9ecef;
+            position: absolute; right: 60px; display: none; gap: 5px; align-items: center;
+            background: rgba(255, 255, 255, 0.95); padding: 4px 12px; border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15); font-size: 0.85em; z-index: 10; border: 1px solid #e9ecef;
         }
-        .y-control-panel span { font-weight: bold; color: #495057; margin-right: 5px; }
-        .y-control-panel input {
-            width: 70px; padding: 3px 6px; border: 1px solid #ced4da;
-            border-radius: 4px; font-family: inherit; text-align: center;
-        }
-        .y-control-panel input:focus { outline: none; border-color: #00B0F0; }
-        .y-control-panel .reset-y {
-            padding: 3px 10px; border: none; background: #fa5252; color: white;
-            border-radius: 4px; cursor: pointer; font-size: 0.9em; transition: 0.2s;
-            margin-left: 5px; font-weight: bold;
-        }
-        .y-control-panel .reset-y:hover { background: #e03131; }
+        .y-control-panel input { width: 70px; padding: 3px 6px; border: 1px solid #ced4da; border-radius: 4px; text-align: center; }
+        .y-control-panel .reset-y { padding: 3px 10px; border: none; background: #fa5252; color: white; border-radius: 4px; cursor: pointer; font-weight: bold; }
+
+        /* สไตล์ตาราง */
+        .table-section { margin-top: 40px; display: none; }
+        .data-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; background: white; }
+        .data-table th { background: #00B0F0; color: white; padding: 12px; border: 1px solid #dee2e6; text-align: center; }
+        .data-table td { padding: 10px; border: 1px solid #dee2e6; text-align: center; font-weight: 500; }
+        .data-table tr:nth-child(even) { background-color: #f8f9fa; }
+        
+        /* สีตัวอักษร */
+        .txt-green { color: #00B050 !important; font-weight: bold; }
+        .txt-red { color: #FF0000 !important; font-weight: bold; }
+
+        /* ปุ่ม Save */
+        .save-section { text-align: center; margin: 30px 0; }
+        .btn-save { padding: 12px 30px; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1.1em; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .btn-save:hover { background: #218838; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header">
-        <h2>📊 ระบบวิเคราะห์กราฟจาก Excel</h2>
+        <h2>📊 ระบบวิเคราะห์กราฟและตารางข้อมูล</h2>
     </div>
     
     <div class="upload-section">
-        <label for="fileInput"><b>เลือกไฟล์ Excel หรือ CSV ที่ประมวลผลแล้ว:</b></label><br><br>
+        <label for="fileInput"><b>เลือกไฟล์ Excel หรือ CSV:</b></label><br><br>
         <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" />
         <div id="status" class="status">รอการอัปโหลดไฟล์...</div>
     </div>
@@ -78,33 +75,53 @@
 
     <div id="chart-container" style="position: relative;">
         <div id="chart"></div>
-        
         <div class="y-control-panel" id="ctrl-price" style="top: 15px;">
             <span>📈 ราคา:</span>
             <input type="number" id="y1-min" placeholder="Min" oninput="applyY('yaxis', 'y1-min', 'y1-max')">
             <input type="number" id="y1-max" placeholder="Max" oninput="applyY('yaxis', 'y1-min', 'y1-max')">
             <button class="reset-y" onclick="resetY('yaxis', 'y1-min', 'y1-max')">Reset</button>
         </div>
-
         <div class="y-control-panel" id="ctrl-candle" style="top: 315px;">
             <span>📊 Candle Size:</span>
             <input type="number" id="y3-min" placeholder="Min" oninput="applyY('yaxis3', 'y3-min', 'y3-max')">
             <input type="number" id="y3-max" placeholder="Max" oninput="applyY('yaxis3', 'y3-min', 'y3-max')">
             <button class="reset-y" onclick="resetY('yaxis3', 'y3-min', 'y3-max')">Reset</button>
         </div>
-
         <div class="y-control-panel" id="ctrl-ma" style="top: 465px;">
             <span>เส้น MA:</span>
             <input type="number" id="y4-min" placeholder="Min" oninput="applyY('yaxis4', 'y4-min', 'y4-max')">
             <input type="number" id="y4-max" placeholder="Max" oninput="applyY('yaxis4', 'y4-min', 'y4-max')">
             <button class="reset-y" onclick="resetY('yaxis4', 'y4-min', 'y4-max')">Reset</button>
         </div>
-
         <div class="y-control-panel" id="ctrl-wick" style="top: 615px;">
             <span>% Wick:</span>
             <input type="number" id="y5-min" placeholder="Min" oninput="applyY('yaxis5', 'y5-min', 'y5-max')">
             <input type="number" id="y5-max" placeholder="Max" oninput="applyY('yaxis5', 'y5-min', 'y5-max')">
             <button class="reset-y" onclick="resetY('yaxis5', 'y5-min', 'y5-max')">Reset</button>
+        </div>
+    </div>
+
+    <div class="table-section" id="tableSection">
+        <hr>
+        <h3>📋 สรุปข้อมูล 20 อันดับล่าสุด (ข้อมูลใหม่ล่าสุดอยู่บน)</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>No. (ลำดับ)</th>
+                    <th>Close</th>
+                    <th>Volume</th>
+                    <th>Candle Size</th>
+                    <th>% Wick</th>
+                    <th>MA7</th>
+                    <th>MA14</th>
+                    <th>MA21</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+        
+        <div class="save-section">
+            <button class="btn-save" onclick="saveAsHTML()">💾 Save HTML Snapshot</button>
         </div>
     </div>
 </div>
@@ -115,164 +132,129 @@
     document.getElementById('fileInput').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
-        
-        document.getElementById('status').innerText = "กำลังประมวลผลไฟล์: " + file.name;
         const reader = new FileReader();
-
         reader.onload = function(e) {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, {type: 'array'});
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-            
             if (jsonData.length > 0) {
                 renderChart(jsonData);
-                document.getElementById('status').innerText = "แสดงผลข้อมูลเรียบร้อยแล้ว (" + jsonData.length + " แถว)";
-            } else {
-                alert("ไม่พบข้อมูลในไฟล์");
+                renderSummaryTable(jsonData);
+                document.getElementById('status').innerText = "โหลดข้อมูลสำเร็จ: " + jsonData.length + " แถว";
             }
         };
         reader.readAsArrayBuffer(file);
     });
 
     function renderChart(rawData) {
-        const data = rawData.reverse(); 
-
+        const data = [...rawData].reverse(); 
         const x = [], open = [], high = [], low = [], close = [], vol = [];
         const cs_y = [], cs_colors = [], ma7 = [], ma14 = [], ma21 = [], ma50 = [], wick_y = [], wick_colors = [];
 
         data.forEach(row => {
             let dateStr = String(row.Date).replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3");
-            let timeStr = row.Time || '00:00:00';
-            x.push(dateStr + ' ' + timeStr);
-
-            open.push(row.Open);
-            high.push(row.High);
-            low.push(row.Low);
-            close.push(row.Close);
-            vol.push(row.Volume);
-
+            x.push(dateStr + ' ' + (row.Time || '00:00:00'));
+            open.push(row.Open); high.push(row.High); low.push(row.Low); close.push(row.Close); vol.push(row.Volume);
             let cs = parseFloat(row['Candle Size'] || 0);
             cs_y.push(cs);
             cs_colors.push(cs > 0 ? '#00B050' : (cs < 0 ? '#FF0000' : '#adb5bd'));
-
-            ma7.push(row.MA7 || null);
-            ma14.push(row.MA14 || null);
-            ma21.push(row.MA21 || null);
-            ma50.push(row.MA50 || null);
-
+            ma7.push(row.MA7 || null); ma14.push(row.MA14 || null); ma21.push(row.MA21 || null); ma50.push(row.MA50 || null);
             let pw = parseFloat(String(row['% Wick'] || '0').replace('%', ''));
             let wSide = row['Wick Side'];
-            if (wSide === 'Top') {
-                wick_y.push(pw);
-                wick_colors.push('#00B050');
-            } else if (wSide === 'Bottom') {
-                wick_y.push(-pw);
-                wick_colors.push('#FF0000');
-            } else {
-                wick_y.push(0);
-                wick_colors.push('#adb5bd');
-            }
+            if (wSide === 'Top') { wick_y.push(pw); wick_colors.push('#00B050'); }
+            else if (wSide === 'Bottom') { wick_y.push(-pw); wick_colors.push('#FF0000'); }
+            else { wick_y.push(0); wick_colors.push('#adb5bd'); }
         });
 
-        globalXData = x; 
-        
-        let minWick = Math.min(...wick_y);
-        let wickMinRange = Math.max(-1000, minWick * 1.1); 
-
-        const traceCandle = {
-            x: x, open: open, high: high, low: low, close: close,
-            type: 'candlestick', name: 'ราคา',
-            increasing: {line: {color: '#00B050'}},
-            decreasing: {line: {color: '#FF0000'}},
-            yaxis: 'y1'
-        };
-
-        const traceVol = {
-            x: x, y: vol, type: 'bar', name: 'Volume',
-            marker: {color: '#ced4da', opacity: 0.3},
-            yaxis: 'y2', showlegend: false
-        };
-
-        const traceCS = { x: x, y: cs_y, type: 'bar', name: 'Candle Size', marker: {color: cs_colors}, yaxis: 'y3' };
-        const traceMA7 = { x: x, y: ma7, name: 'MA7', line: {color: '#00B0F0', width: 1.5}, yaxis: 'y4' };
-        const traceMA14 = { x: x, y: ma14, name: 'MA14', line: {color: '#51cf66', width: 1.5}, yaxis: 'y4' };
-        const traceMA21 = { x: x, y: ma21, name: 'MA21', line: {color: '#fcc419', width: 1.5}, yaxis: 'y4' };
-        const traceMA50 = { x: x, y: ma50, name: 'MA50', line: {color: '#f06595', width: 1.5}, yaxis: 'y4' };
-
-        const traceWick = { x: x, y: wick_y, type: 'bar', name: '% Wick', marker: {color: wick_colors}, yaxis: 'y5' };
-
+        globalXData = x;
         const layout = {
-            dragmode: 'zoom',
-            hovermode: 'x unified',
-            showlegend: true,
-            legend: { orientation: 'h', y: 1.05 },
+            dragmode: 'zoom', hovermode: 'x unified', showlegend: true, legend: { orientation: 'h', y: 1.05 },
             xaxis: { rangeslider: { visible: false } },
             yaxis1: { title: 'ราคา', domain: [0.65, 1] },
             yaxis2: { title: 'Volume', overlaying: 'y1', side: 'right', showgrid: false },
-            yaxis3: { title: 'Candle Size', domain: [0.45, 0.60], zeroline: true, zerolinecolor: '#ccc', zerolinewidth: 2 },
+            yaxis3: { title: 'Candle Size', domain: [0.45, 0.60], zeroline: true },
             yaxis4: { title: 'MA Ribbon', domain: [0.25, 0.40] },
-            yaxis5: { title: '% Wick (%)', domain: [0, 0.20], zeroline: true, zerolinecolor: '#ccc', zerolinewidth: 2, range: [wickMinRange, 1000] },
-            template: 'plotly_white',
-            margin: { t: 50, b: 50, l: 60, r: 60 }
+            yaxis5: { title: '% Wick (%)', domain: [0, 0.20], zeroline: true, range: [-100, 100] },
+            template: 'plotly_white', margin: { t: 50, b: 50, l: 60, r: 60 }
         };
 
-        Plotly.newPlot('chart', [traceCandle, traceVol, traceCS, traceMA7, traceMA14, traceMA21, traceMA50, traceWick], layout);
-        
-        // แสดงปุ่ม Zoom และ แผงควบคุม Y-Axis เมื่อกราฟพร้อม
-        document.getElementById('rangeButtons').style.display = 'flex';
-        document.querySelectorAll('.y-control-panel').forEach(panel => panel.style.display = 'flex');
+        Plotly.newPlot('chart', [
+            { x: x, open: open, high: high, low: low, close: close, type: 'candlestick', name: 'Price', yaxis: 'y1' },
+            { x: x, y: vol, type: 'bar', name: 'Volume', marker: {color: '#ced4da', opacity: 0.3}, yaxis: 'y2' },
+            { x: x, y: cs_y, type: 'bar', name: 'Candle Size', marker: {color: cs_colors}, yaxis: 'y3' },
+            { x: x, y: ma7, name: 'MA7', line: {color: '#00B0F0'}, yaxis: 'y4' },
+            { x: x, y: ma14, name: 'MA14', line: {color: '#51cf66'}, yaxis: 'y4' },
+            { x: x, y: ma21, name: 'MA21', line: {color: '#fcc419'}, yaxis: 'y4' },
+            { x: x, y: wick_y, type: 'bar', name: '% Wick', marker: {color: wick_colors}, yaxis: 'y5' }
+        ], layout);
 
-        // รีเซ็ตปุ่ม Zoom เป็น 'ทั้งหมด'
-        document.querySelectorAll('.btn-group button').forEach(b => b.classList.remove('active'));
-        document.querySelector('.btn-group button:last-child').classList.add('active');
+        document.getElementById('rangeButtons').style.display = 'flex';
+        document.querySelectorAll('.y-control-panel').forEach(p => p.style.display = 'flex');
     }
 
-    // ==========================================
-    // ฟังก์ชันจัดการแกน Y แบบ Real-time
-    // ==========================================
-    let yAxisTimers = {}; // ใช้สำหรับ Debounce ป้องกันกราฟกระตุกเวลาพิมพ์เลขเร็วๆ
+    function renderSummaryTable(rawData) {
+        const latest20 = rawData.slice(0, 20); 
+        const tableBody = document.getElementById('tableBody');
+        tableBody.innerHTML = '';
 
+        latest20.forEach((row, index) => {
+            const cs = parseFloat(row['Candle Size'] || 0);
+            const csClass = cs > 0 ? 'txt-green' : (cs < 0 ? 'txt-red' : '');
+            
+            const wSide = row['Wick Side'];
+            const wickClass = wSide === 'Top' ? 'txt-green' : (wSide === 'Bottom' ? 'txt-red' : '');
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${index + 1}</td>
+                <td class="${csClass}">${parseFloat(row.Close).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                <td class="${csClass}">${parseFloat(row.Volume).toLocaleString()}</td>
+                <td class="${csClass}">${cs.toFixed(2)}</td>
+                <td class="${wickClass}">${row['% Wick'] || '0%'}</td>
+                <td>${row.MA7 ? parseFloat(row.MA7).toFixed(2) : '-'}</td>
+                <td>${row.MA14 ? parseFloat(row.MA14).toFixed(2) : '-'}</td>
+                <td>${row.MA21 ? parseFloat(row.MA21).toFixed(2) : '-'}</td>
+            `;
+            tableBody.appendChild(tr);
+        });
+
+        document.getElementById('tableSection').style.display = 'block';
+    }
+
+    function saveAsHTML() {
+        const htmlContent = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const a = document.createElement('a');
+        const timestamp = new Date().toISOString().slice(0,16).replace(/[:T]/g, '-');
+        a.href = URL.createObjectURL(blob);
+        a.download = `trading-report-${timestamp}.html`;
+        a.click();
+    }
+
+    let yAxisTimers = {};
     function applyY(axisName, minId, maxId) {
         clearTimeout(yAxisTimers[axisName]);
-        
-        // หน่วงเวลา 400ms ให้ผู้ใช้พิมพ์ตัวเลขเสร็จก่อนกราฟจะขยับ
         yAxisTimers[axisName] = setTimeout(() => {
-            let minInput = document.getElementById(minId).value;
-            let maxInput = document.getElementById(maxId).value;
-            let chart = document.getElementById('chart');
-            
-            // ดึงค่า Range ปัจจุบันมาเป็น Fallback เผื่อช่องว่างถูกเว้นไว้
-            let layoutAxis = chart.layout[axisName];
-            if(axisName === 'yaxis') layoutAxis = chart.layout.yaxis || chart.layout.yaxis1;
-            let currentRange = layoutAxis ? (layoutAxis.range || [0, 100]) : [0, 100];
-
-            let newMin = minInput !== "" ? parseFloat(minInput) : currentRange[0];
-            let newMax = maxInput !== "" ? parseFloat(maxInput) : currentRange[1];
-
-            // อัปเดตก็ต่อเมื่อค่า Min น้อยกว่า Max (ป้องกันกราฟพลิกกลับหัวระหว่างพิมพ์)
-            if (!isNaN(newMin) && !isNaN(newMax) && newMin < newMax) {
+            let min = document.getElementById(minId).value;
+            let max = document.getElementById(maxId).value;
+            if (min !== "" && max !== "") {
                 let update = {};
-                update[axisName + '.range'] = [newMin, newMax];
-                update[axisName + '.autorange'] = false; // ปิด Auto Scale
+                update[axisName + '.range'] = [parseFloat(min), parseFloat(max)];
+                update[axisName + '.autorange'] = false;
                 Plotly.relayout('chart', update);
             }
-        }, 400); 
+        }, 400);
     }
 
     function resetY(axisName, minId, maxId) {
-        clearTimeout(yAxisTimers[axisName]);
         document.getElementById(minId).value = "";
         document.getElementById(maxId).value = "";
-        
-        let update = {};
-        update[axisName + '.autorange'] = true; // เปิด Auto Scale กลับมา
+        let update = {}; update[axisName + '.autorange'] = true;
         Plotly.relayout('chart', update);
     }
 
-    // ==========================================
-    // ฟังก์ชันจัดการปุ่มซูมแกน X (ของเดิม)
-    // ==========================================
+    // แก้ไขฟังก์ชัน setZoom นำการคำนวณวันเวลากลับมาใช้งาน
     function setZoom(rangeType, btnElement) {
         document.querySelectorAll('.btn-group button').forEach(b => b.classList.remove('active'));
         if(btnElement) btnElement.classList.add('active');
