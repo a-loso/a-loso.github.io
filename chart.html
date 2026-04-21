@@ -60,7 +60,7 @@
         const data = rawData.reverse(); 
 
         const x = [], open = [], high = [], low = [], close = [], vol = [];
-        const candleSize = [], ma7 = [], ma14 = [], ma21 = [], ma50 = [], pctWick = [];
+        const cs_y = [], cs_colors = [], ma7 = [], ma14 = [], ma21 = [], ma50 = [], wick_y = [], wick_colors = [];
 
         data.forEach(row => {
             // สร้างแกนเวลา
@@ -74,16 +74,29 @@
             close.push(row.Close);
             vol.push(row.Volume);
 
-            // ดึงค่าที่ประมวลผลแล้วจาก Excel (ใช้ Absolute สำหรับ Candle Size เพื่อความสวยงาม)
-            candleSize.push(Math.abs(row['Candle Size'] || 0));
+            // Candle Size (Positive = Green, Negative = Red)
+            let cs = parseFloat(row['Candle Size'] || 0);
+            cs_y.push(cs);
+            cs_colors.push(cs > 0 ? '#00B050' : (cs < 0 ? '#FF0000' : '#adb5bd'));
+
             ma7.push(row.MA7 || null);
             ma14.push(row.MA14 || null);
             ma21.push(row.MA21 || null);
             ma50.push(row.MA50 || null);
 
-            // ตัดเครื่องหมาย % ออกจากค่า % Wick
-            let pw = String(row['% Wick'] || '0').replace('%', '');
-            pctWick.push(parseFloat(pw));
+            // % Wick (Top = Positive/Green, Bottom = Negative/Red)
+            let pw = parseFloat(String(row['% Wick'] || '0').replace('%', ''));
+            let wSide = row['Wick Side'];
+            if (wSide === 'Top') {
+                wick_y.push(pw);
+                wick_colors.push('#00B050');
+            } else if (wSide === 'Bottom') {
+                wick_y.push(-pw);
+                wick_colors.push('#FF0000');
+            } else {
+                wick_y.push(0);
+                wick_colors.push('#adb5bd');
+            }
         });
 
         const traceCandle = {
@@ -100,25 +113,25 @@
             yaxis: 'y2', showlegend: false
         };
 
-        const traceCS = { x: x, y: candleSize, name: 'Candle Size', line: {color: '#adb5bd', width: 2}, yaxis: 'y3' };
-        const traceMA7 = { x: x, y: ma7, name: 'MA7', line: {color: '#00B0F0', width: 1.5}, yaxis: 'y3' };
-        const traceMA14 = { x: x, y: ma14, name: 'MA14', line: {color: '#51cf66', width: 1.5}, yaxis: 'y3' };
-        const traceMA21 = { x: x, y: ma21, name: 'MA21', line: {color: '#fcc419', width: 1.5}, yaxis: 'y3' };
-        const traceMA50 = { x: x, y: ma50, name: 'MA50', line: {color: '#f06595', width: 1.5}, yaxis: 'y3' };
+        const traceCS = { x: x, y: cs_y, type: 'bar', name: 'Candle Size', marker: {color: cs_colors}, yaxis: 'y3' };
+        const traceMA7 = { x: x, y: ma7, name: 'MA7', line: {color: '#00B0F0', width: 1.5}, yaxis: 'y4' };
+        const traceMA14 = { x: x, y: ma14, name: 'MA14', line: {color: '#51cf66', width: 1.5}, yaxis: 'y4' };
+        const traceMA21 = { x: x, y: ma21, name: 'MA21', line: {color: '#fcc419', width: 1.5}, yaxis: 'y4' };
+        const traceMA50 = { x: x, y: ma50, name: 'MA50', line: {color: '#f06595', width: 1.5}, yaxis: 'y4' };
 
-        const traceWick = { x: x, y: pctWick, name: '% Wick', line: {color: '#fd7e14', width: 1.5}, yaxis: 'y4' };
+        const traceWick = { x: x, y: wick_y, type: 'bar', name: '% Wick', marker: {color: wick_colors}, yaxis: 'y5' };
 
         const layout = {
-            grid: {rows: 3, columns: 1, pattern: 'independent'},
             dragmode: 'zoom',
             hovermode: 'x unified',
             showlegend: true,
             legend: { orientation: 'h', y: 1.05 },
             xaxis: { rangeslider: { visible: false } },
-            yaxis1: { title: 'ราคา', domain: [0.55, 1] },
+            yaxis1: { title: 'ราคา', domain: [0.65, 1] },
             yaxis2: { title: 'Volume', overlaying: 'y1', side: 'right', showgrid: false },
-            yaxis3: { title: 'CS & MA Ribbon', domain: [0.28, 0.50] },
-            yaxis4: { title: '% Wick (%)', domain: [0, 0.23] },
+            yaxis3: { title: 'Candle Size', domain: [0.45, 0.60], zeroline: true, zerolinecolor: '#ccc', zerolinewidth: 2 },
+            yaxis4: { title: 'MA Ribbon', domain: [0.25, 0.40] },
+            yaxis5: { title: '% Wick (%)', domain: [0, 0.20], zeroline: true, zerolinecolor: '#ccc', zerolinewidth: 2 },
             template: 'plotly_white',
             margin: { t: 50, b: 50, l: 60, r: 60 }
         };
