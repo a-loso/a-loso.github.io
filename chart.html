@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>Trading Analysis Dashboard</title>
+    <link rel="icon" href="fav.png" type="image/x-icon">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: 'Sarabun', sans-serif; margin: 20px; background-color: #f8f9fa; }
+        .container { max-width: 1300px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; margin-bottom: 20px; padding-bottom: 10px; }
+        .upload-section { background: #f1f3f5; padding: 20px; border: 2px dashed #ced4da; border-radius: 8px; text-align: center; margin-bottom: 20px; }
+        #chart { width: 100%; height: 850px; }
+        .status { color: #666; font-size: 0.9em; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h2>📊 ระบบวิเคราะห์กราฟจาก Excel</h2>
+    </div>
+    
+    <div class="upload-section">
+        <label for="fileInput"><b>เลือกไฟล์ Excel หรือ CSV ที่ประมวลผลแล้ว:</b></label><br><br>
+        <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" />
+        <div id="status" class="status">รอการอัปโหลดไฟล์...</div>
+    </div>
+
+    <div id="chart"></div>
+</div>
+
+<script>
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        document.getElementById('status').innerText = "กำลังประมวลผลไฟล์: " + file.name;
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+            
+            if (jsonData.length > 0) {
+                renderChart(jsonData);
+                document.getElementById('status').innerText = "แสดงผลข้อมูลเรียบร้อยแล้ว (" + jsonData.length + " แถว)";
+            } else {
+                alert("ไม่พบข้อมูลในไฟล์");
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    function renderChart(rawData) {
+        // จัดเรียงข้อมูลตามเวลาจากอดีต -> ปัจจุบัน เพื่อให้กราฟพล็อตได้ถูกต้อง
+        const data = rawData.reverse(); 
+
+        const x = [], open = [], high = [], low = [], close = [], vol = [];
+        const candleSize = [], ma7 = [], ma14 = [], ma21 = [], ma50 = [], pctWick = [];
+
+        data.forEach(row => {
+            // สร้างแกนเวลา
+            let dateStr = String(row.Date).replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3");
+            let timeStr = row.Time || '00:00:00';
+            x.push(dateStr + ' ' + timeStr);
+
+            open.push(row.Open);
+            high.push(row.High);
+            low.push(row.Low);
+            close.push(row.Close);
+            vol.push(row.Volume);
+
+            // ดึงค่าที่ประมวลผลแล้วจาก Excel (ใช้ Absolute สำหรับ Candle Size เพื่อความสวยงาม)
+            candleSize.push(Math.abs(row['Candle Size'] || 0));
+            ma7.push(row.MA7 || null);
+            ma14.push(row.MA14 || null);
+            ma21.push(row.MA21 || null);
+            ma50.push(row.MA50 || null);
+
+            // ตัดเครื่องหมาย % ออกจากค่า % Wick
+            let pw = String(row['% Wick'] || '0').replace('%', '');
+            pctWick.push(parseFloat(pw));
+        });
+
+        const traceCandle = {
+            x: x, open: open, high: high, low: low, close: close,
+            type: 'candlestick', name: 'ราคา',
+            increasing: {line: {color: '#00B050'}},
+            decreasing: {line: {color: '#FF0000'}},
+            yaxis: 'y1'
+        };
+
+        const traceVol = {
+            x: x, y: vol, type: 'bar', name: 'Volume',
+            marker: {color: '#ced4da', opacity: 0.3},
+            yaxis: 'y2', showlegend: false
+        };
+
+        const traceCS = { x: x, y: candleSize, name: 'Candle Size', line: {color: '#adb5bd', width: 2}, yaxis: 'y3' };
+        const traceMA7 = { x: x, y: ma7, name: 'MA7', line: {color: '#00B0F0', width: 1.5}, yaxis: 'y3' };
+        const traceMA14 = { x: x, y: ma14, name: 'MA14', line: {color: '#51cf66', width: 1.5}, yaxis: 'y3' };
+        const traceMA21 = { x: x, y: ma21, name: 'MA21', line: {color: '#fcc419', width: 1.5}, yaxis: 'y3' };
+        const traceMA50 = { x: x, y: ma50, name: 'MA50', line: {color: '#f06595', width: 1.5}, yaxis: 'y3' };
+
+        const traceWick = { x: x, y: pctWick, name: '% Wick', line: {color: '#fd7e14', width: 1.5}, yaxis: 'y4' };
+
+        const layout = {
+            grid: {rows: 3, columns: 1, pattern: 'independent'},
+            dragmode: 'zoom',
+            hovermode: 'x unified',
+            showlegend: true,
+            legend: { orientation: 'h', y: 1.05 },
+            xaxis: { rangeslider: { visible: false } },
+            yaxis1: { title: 'ราคา', domain: [0.55, 1] },
+            yaxis2: { title: 'Volume', overlaying: 'y1', side: 'right', showgrid: false },
+            yaxis3: { title: 'CS & MA Ribbon', domain: [0.28, 0.50] },
+            yaxis4: { title: '% Wick (%)', domain: [0, 0.23] },
+            template: 'plotly_white',
+            margin: { t: 50, b: 50, l: 60, r: 60 }
+        };
+
+        Plotly.newPlot('chart', [traceCandle, traceVol, traceCS, traceMA7, traceMA14, traceMA21, traceMA50, traceWick], layout);
+    }
+</script>
+
+</body>
+</html>
