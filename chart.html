@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Trading Analysis Dashboard</title>
-    <link rel="icon" href="fav-c.png" type="image/x-icon">
+    <link rel="icon" href="fav.png" type="image/x-icon">
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
@@ -13,6 +13,15 @@
         .upload-section { background: #f1f3f5; padding: 20px; border: 2px dashed #ced4da; border-radius: 8px; text-align: center; margin-bottom: 20px; }
         #chart { width: 100%; height: 850px; }
         .status { color: #666; font-size: 0.9em; margin-top: 10px; }
+        
+        /* สไตล์สำหรับปุ่มเลือกช่วงเวลา */
+        .btn-group { display: flex; gap: 10px; justify-content: center; margin-bottom: 15px; flex-wrap: wrap; }
+        .btn-group button {
+            padding: 8px 16px; border: 1px solid #00B0F0; background: white; color: #00B0F0;
+            border-radius: 6px; cursor: pointer; font-family: 'Sarabun', sans-serif; font-weight: bold; transition: 0.2s;
+        }
+        .btn-group button:hover { background: #00B0F0; color: white; }
+        .btn-group button.active { background: #00B0F0; color: white; border-color: #00B0F0; }
     </style>
 </head>
 <body>
@@ -28,10 +37,23 @@
         <div id="status" class="status">รอการอัปโหลดไฟล์...</div>
     </div>
 
+    <div class="btn-group" id="rangeButtons" style="display: none;">
+        <button onclick="setZoom('1d', this)">1 วัน</button>
+        <button onclick="setZoom('1w', this)">1 สัปดาห์</button>
+        <button onclick="setZoom('4w', this)">4 สัปดาห์</button>
+        <button onclick="setZoom('3m', this)">3 เดือน</button>
+        <button onclick="setZoom('6m', this)">6 เดือน</button>
+        <button onclick="setZoom('1y', this)">1 ปี</button>
+        <button onclick="setZoom('75c', this)">75 แท่งเทียน</button>
+        <button onclick="setZoom('all', this)" class="active">ทั้งหมด</button>
+    </div>
+
     <div id="chart"></div>
 </div>
 
 <script>
+    let globalXData = []; // เก็บค่าแกน X เพื่อใช้อ้างอิงตอนกดปุ่ม Zoom
+
     document.getElementById('fileInput').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -56,14 +78,12 @@
     });
 
     function renderChart(rawData) {
-        // จัดเรียงข้อมูลตามเวลาจากอดีต -> ปัจจุบัน เพื่อให้กราฟพล็อตได้ถูกต้อง
         const data = rawData.reverse(); 
 
         const x = [], open = [], high = [], low = [], close = [], vol = [];
         const cs_y = [], cs_colors = [], ma7 = [], ma14 = [], ma21 = [], ma50 = [], wick_y = [], wick_colors = [];
 
         data.forEach(row => {
-            // สร้างแกนเวลา
             let dateStr = String(row.Date).replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3");
             let timeStr = row.Time || '00:00:00';
             x.push(dateStr + ' ' + timeStr);
@@ -74,7 +94,6 @@
             close.push(row.Close);
             vol.push(row.Volume);
 
-            // Candle Size (Positive = Green, Negative = Red)
             let cs = parseFloat(row['Candle Size'] || 0);
             cs_y.push(cs);
             cs_colors.push(cs > 0 ? '#00B050' : (cs < 0 ? '#FF0000' : '#adb5bd'));
@@ -84,7 +103,6 @@
             ma21.push(row.MA21 || null);
             ma50.push(row.MA50 || null);
 
-            // % Wick (Top = Positive/Green, Bottom = Negative/Red)
             let pw = parseFloat(String(row['% Wick'] || '0').replace('%', ''));
             let wSide = row['Wick Side'];
             if (wSide === 'Top') {
@@ -98,6 +116,13 @@
                 wick_colors.push('#adb5bd');
             }
         });
+
+        globalXData = x; // บันทึกไว้ใช้กับปุ่ม
+        
+        // หาค่าต่ำสุดของ Wick เพื่อไม่ให้แกน Y โดนตัดในส่วนล่างจนเกินไป 
+        // แต่ถูกจำกัดให้ต่ำสุดที่ -3000 และ สูงสุดที่ 3000
+        let minWick = Math.min(...wick_y);
+        let wickMinRange = Math.max(-1000, minWick * 1.1); 
 
         const traceCandle = {
             x: x, open: open, high: high, low: low, close: close,
@@ -131,12 +156,67 @@
             yaxis2: { title: 'Volume', overlaying: 'y1', side: 'right', showgrid: false },
             yaxis3: { title: 'Candle Size', domain: [0.45, 0.60], zeroline: true, zerolinecolor: '#ccc', zerolinewidth: 2 },
             yaxis4: { title: 'MA Ribbon', domain: [0.25, 0.40] },
-            yaxis5: { title: '% Wick (%)', domain: [0, 0.20], zeroline: true, zerolinecolor: '#ccc', zerolinewidth: 2 },
+            // ปรับเพดานแกน Y สูงสุดที่ 3000
+            yaxis5: { title: '% Wick (%)', domain: [0, 0.20], zeroline: true, zerolinecolor: '#ccc', zerolinewidth: 2, range: [wickMinRange, 1000] },
             template: 'plotly_white',
             margin: { t: 50, b: 50, l: 60, r: 60 }
         };
 
         Plotly.newPlot('chart', [traceCandle, traceVol, traceCS, traceMA7, traceMA14, traceMA21, traceMA50, traceWick], layout);
+        
+        // แสดงปุ่มเมื่อกราฟพร้อม
+        document.getElementById('rangeButtons').style.display = 'flex';
+        // รีเซ็ตปุ่มเป็น 'ทั้งหมด'
+        document.querySelectorAll('.btn-group button').forEach(b => b.classList.remove('active'));
+        document.querySelector('.btn-group button:last-child').classList.add('active');
+    }
+
+    // ฟังก์ชันจัดการปุ่มซูม
+    function setZoom(rangeType, btnElement) {
+        // อัปเดตสีปุ่ม
+        document.querySelectorAll('.btn-group button').forEach(b => b.classList.remove('active'));
+        if(btnElement) btnElement.classList.add('active');
+
+        if (globalXData.length === 0) return;
+
+        let endIdx = globalXData.length - 1;
+        let endStr = globalXData[endIdx];
+        
+        // แปลงวันที่สิ้นสุด เพื่อใช้คำนวณถอยหลัง
+        let endDate = new Date(endStr.replace(' ', 'T')); 
+        let startDate = new Date(endDate);
+        let startStr = '';
+
+        if (rangeType === 'all') {
+            Plotly.relayout('chart', { 'xaxis.autorange': true });
+            return;
+        } else if (rangeType === '75c') {
+            // ดึง 75 แท่งล่าสุดโดยใช้ Array Index ของข้อมูลจริง
+            let startIdx = Math.max(0, globalXData.length - 75);
+            startStr = globalXData[startIdx];
+        } else {
+            // คำนวณวันที่ย้อนหลังตามปฏิทิน
+            if (rangeType === '1d') startDate.setDate(endDate.getDate() - 1);
+            else if (rangeType === '1w') startDate.setDate(endDate.getDate() - 7);
+            else if (rangeType === '4w') startDate.setDate(endDate.getDate() - 28);
+            else if (rangeType === '3m') startDate.setMonth(endDate.getMonth() - 3);
+            else if (rangeType === '6m') startDate.setMonth(endDate.getMonth() - 6);
+            else if (rangeType === '1y') startDate.setFullYear(endDate.getFullYear() - 1);
+
+            // แปลงวันกลับเป็น String ให้เข้ากับ Format แกน X
+            let y = startDate.getFullYear();
+            let m = String(startDate.getMonth() + 1).padStart(2, '0');
+            let d = String(startDate.getDate()).padStart(2, '0');
+            let h = String(startDate.getHours()).padStart(2, '0');
+            let min = String(startDate.getMinutes()).padStart(2, '0');
+            let sec = String(startDate.getSeconds()).padStart(2, '0');
+            startStr = `${y}-${m}-${d} ${h}:${min}:${sec}`;
+        }
+
+        // อัปเดตแกน X ในกราฟ
+        Plotly.relayout('chart', {
+            'xaxis.range': [startStr, endStr]
+        });
     }
 </script>
 
