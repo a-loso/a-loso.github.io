@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>Trading Analysis Dashboard</title>
+    <title>Trading Analysis Dashboard v12</title>
     <link rel="icon" href="fav-3.png" type="image/x-icon">
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -14,7 +14,6 @@
         #chart { width: 100%; height: 850px; }
         .status { color: #666; font-size: 0.9em; margin-top: 10px; }
         
-        /* ปุ่มเลือกช่วงเวลา */
         .btn-group { display: flex; gap: 10px; justify-content: center; margin-bottom: 15px; flex-wrap: wrap; }
         .btn-group button {
             padding: 8px 16px; border: 1px solid #00B0F0; background: white; color: #00B0F0;
@@ -23,7 +22,6 @@
         .btn-group button:hover { background: #00B0F0; color: white; }
         .btn-group button.active { background: #00B0F0; color: white; border-color: #00B0F0; }
 
-        /* แผงควบคุมแกน Y */
         .y-control-panel {
             position: absolute; right: 60px; display: none; gap: 5px; align-items: center;
             background: rgba(255, 255, 255, 0.95); padding: 4px 12px; border-radius: 6px;
@@ -32,18 +30,15 @@
         .y-control-panel input { width: 70px; padding: 3px 6px; border: 1px solid #ced4da; border-radius: 4px; text-align: center; }
         .y-control-panel .reset-y { padding: 3px 10px; border: none; background: #fa5252; color: white; border-radius: 4px; cursor: pointer; font-weight: bold; }
 
-        /* สไตล์ตาราง */
         .table-section { margin-top: 40px; display: none; }
         .data-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; background: white; }
         .data-table th { background: #00B0F0; color: white; padding: 12px; border: 1px solid #dee2e6; text-align: center; }
         .data-table td { padding: 10px; border: 1px solid #dee2e6; text-align: center; font-weight: 500; }
         .data-table tr:nth-child(even) { background-color: #f8f9fa; }
         
-        /* สีตัวอักษร */
         .txt-green { color: #00B050 !important; font-weight: bold; }
         .txt-red { color: #FF0000 !important; font-weight: bold; }
 
-        /* ปุ่ม Save */
         .save-section { text-align: center; margin: 30px 0; }
         .btn-save { padding: 12px 30px; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1.1em; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .btn-save:hover { background: #218838; }
@@ -53,7 +48,7 @@
 
 <div class="container">
     <div class="header">
-        <h2>📊 ระบบวิเคราะห์กราฟและตารางข้อมูล</h2>
+        <h2>📊 ระบบวิเคราะห์กราฟและตารางข้อมูล (v12)</h2>
     </div>
     
     <div class="upload-section">
@@ -103,7 +98,7 @@
 
     <div class="table-section" id="tableSection">
         <hr>
-        <h3>📋 สรุปข้อมูล 20 อันดับล่าสุด (ข้อมูลใหม่ล่าสุดอยู่บน)</h3>
+        <h3>📋 สรุปข้อมูล 20 อันดับล่าสุด</h3>
         <table class="data-table">
             <thead>
                 <tr>
@@ -128,6 +123,7 @@
 
 <script>
     let globalXData = []; 
+    let globalRawDates = []; // เก็บวันที่ดิบสำหรับระบบคำนวณการซูม
 
     document.getElementById('fileInput').addEventListener('change', function(e) {
         const file = e.target.files[0];
@@ -151,10 +147,29 @@
         const data = [...rawData].reverse(); 
         const x = [], open = [], high = [], low = [], close = [], vol = [];
         const cs_y = [], cs_colors = [], ma7 = [], ma14 = [], ma21 = [], ma50 = [], wick_y = [], wick_colors = [];
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+        globalRawDates = []; // Reset ข้อมูลเก่า
 
         data.forEach(row => {
             let dateStr = String(row.Date).replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3");
-            x.push(dateStr + ' ' + (row.Time || '00:00:00'));
+            let rawTime = row.Time || '00:00:00';
+            let rawDateTime = dateStr + ' ' + rawTime;
+            
+            globalRawDates.push(rawDateTime); // เก็บ Date ดิบไว้ใช้คำนวณการกดปุ่ม
+
+            // แปลงรูปแบบ Date ให้สวยงามเป็น mmm dd / am/pm
+            let dObj = new Date(rawDateTime.replace(' ', 'T'));
+            let mmm = months[dObj.getMonth()];
+            let dd = dObj.getDate();
+            let h = dObj.getHours();
+            let m = String(dObj.getMinutes()).padStart(2, '0');
+            let ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12 || 12; // แปลงเลข 0 เป็น 12
+            
+            let formattedDisplay = `${mmm} ${dd}<br>${h}:${m}${ampm}`; // ขึ้นบรรทัดใหม่เพื่อให้สวยงามบนแกน X
+            x.push(formattedDisplay);
+
             open.push(row.Open); high.push(row.High); low.push(row.Low); close.push(row.Close); vol.push(row.Volume);
             let cs = parseFloat(row['Candle Size'] || 0);
             cs_y.push(cs);
@@ -170,7 +185,11 @@
         globalXData = x;
         const layout = {
             dragmode: 'zoom', hovermode: 'x unified', showlegend: true, legend: { orientation: 'h', y: 1.05 },
-            xaxis: { rangeslider: { visible: false } },
+            xaxis: { 
+                rangeslider: { visible: false },
+                type: 'category', 
+                nticks: 10 // จำกัดการโชว์ป้ายกำกับให้ไม่แสดงทุกแท่ง (โชว์แค่วันหลักๆ ให้สะอาดตา)
+            },
             yaxis1: { title: 'ราคา', domain: [0.65, 1] },
             yaxis2: { title: 'Volume', overlaying: 'y1', side: 'right', showgrid: false },
             yaxis3: { title: 'Candle Size', domain: [0.45, 0.60], zeroline: true },
@@ -201,7 +220,6 @@
         latest20.forEach((row, index) => {
             const cs = parseFloat(row['Candle Size'] || 0);
             const csClass = cs > 0 ? 'txt-green' : (cs < 0 ? 'txt-red' : '');
-            
             const wSide = row['Wick Side'];
             const wickClass = wSide === 'Top' ? 'txt-green' : (wSide === 'Bottom' ? 'txt-red' : '');
 
@@ -218,7 +236,6 @@
             `;
             tableBody.appendChild(tr);
         });
-
         document.getElementById('tableSection').style.display = 'block';
     }
 
@@ -254,27 +271,29 @@
         Plotly.relayout('chart', update);
     }
 
-    // แก้ไขฟังก์ชัน setZoom นำการคำนวณวันเวลากลับมาใช้งาน
     function setZoom(rangeType, btnElement) {
         document.querySelectorAll('.btn-group button').forEach(b => b.classList.remove('active'));
         if(btnElement) btnElement.classList.add('active');
 
-        if (globalXData.length === 0) return;
+        if (globalRawDates.length === 0) return;
 
-        let endIdx = globalXData.length - 1;
-        let endStr = globalXData[endIdx];
+        let endIdx = globalRawDates.length - 1;
         
-        let endDate = new Date(endStr.replace(' ', 'T')); 
-        let startDate = new Date(endDate);
-        let startStr = '';
-
         if (rangeType === 'all') {
             Plotly.relayout('chart', { 'xaxis.autorange': true });
             return;
-        } else if (rangeType === '75c') {
-            let startIdx = Math.max(0, globalXData.length - 75);
-            startStr = globalXData[startIdx];
+        }
+
+        let startIdx = 0;
+
+        if (rangeType === '75c') {
+            startIdx = Math.max(0, globalRawDates.length - 75);
         } else {
+            // ใช้เวลาดิบในการคำนวณย้อนหลัง เพื่อไม่ให้ error
+            let endStr = globalRawDates[endIdx];
+            let endDate = new Date(endStr.replace(' ', 'T')); 
+            let startDate = new Date(endDate);
+
             if (rangeType === '1d') startDate.setDate(endDate.getDate() - 1);
             else if (rangeType === '1w') startDate.setDate(endDate.getDate() - 7);
             else if (rangeType === '4w') startDate.setDate(endDate.getDate() - 28);
@@ -282,17 +301,14 @@
             else if (rangeType === '6m') startDate.setMonth(endDate.getMonth() - 6);
             else if (rangeType === '1y') startDate.setFullYear(endDate.getFullYear() - 1);
 
-            let y = startDate.getFullYear();
-            let m = String(startDate.getMonth() + 1).padStart(2, '0');
-            let d = String(startDate.getDate()).padStart(2, '0');
-            let h = String(startDate.getHours()).padStart(2, '0');
-            let min = String(startDate.getMinutes()).padStart(2, '0');
-            let sec = String(startDate.getSeconds()).padStart(2, '0');
-            startStr = `${y}-${m}-${d} ${h}:${min}:${sec}`;
+            let targetTime = startDate.getTime();
+            
+            startIdx = globalRawDates.findIndex(d => new Date(d.replace(' ', 'T')).getTime() >= targetTime);
+            if (startIdx === -1) startIdx = 0;
         }
 
         Plotly.relayout('chart', {
-            'xaxis.range': [startStr, endStr]
+            'xaxis.range': [startIdx - 0.5, endIdx + 0.5]
         });
     }
 </script>
